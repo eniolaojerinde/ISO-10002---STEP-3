@@ -1,1 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Step 3: LOG puzzle</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#e7e8ea;--panel:#ffffff;--ink:#1c1d20;--mut:#62666d;--acc:#e3101f;--accink:#ffffff;--line:#c3c6cc;--board:#d9dbdf;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141517;--panel:#1e2024;--ink:#ececee;--mut:#9a9ea6;--acc:#ff3040;--accink:#ffffff;--line:#35383e;--board:#25272b;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141517;--panel:#1e2024;--ink:#ececee;--mut:#9a9ea6;--acc:#ff3040;--accink:#ffffff;--line:#35383e;--board:#25272b;color-scheme:dark}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.4 "Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;flex-direction:column;overflow:hidden}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
+h1{font-size:18px;font-weight:700;margin:0 auto 0 0}
+button,select,.btn{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 11px;cursor:pointer}
+button:hover,.btn:hover{border-color:var(--acc)}
+button:focus-visible,select:focus-visible,.btn:focus-within{outline:2px solid var(--acc);outline-offset:2px}
+button.on{background:var(--acc);color:var(--accink);border-color:var(--acc)}
+.stat{color:var(--mut);font-variant-numeric:tabular-nums}
+.stat b{color:var(--ink);font-weight:700}
+#stage{flex:1;min-height:0;position:relative;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+#board{position:absolute;background:var(--board);outline:2px dashed var(--line);border-radius:2px}
+#hintc{width:100%;height:100%;display:block;opacity:0;transition:opacity .2s}
+#hintc.on{opacity:.28}
+.piece{position:absolute;left:0;top:0;pointer-events:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4));z-index:10}
+.piece.lift{filter:drop-shadow(0 9px 10px rgba(0,0,0,.45))}
+.piece.done{filter:none;z-index:1}
+.ov{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,12,15,.6);z-index:1000;padding:16px}
+.ov.on{display:flex}
+.card{background:var(--panel);border-radius:14px;padding:18px;text-align:center;max-width:92vw}
+.card h2{margin:0 0 6px;font-size:22px}
+.card p{margin:6px 0 12px;color:var(--mut)}
+.card.rem{text-align:left;max-width:440px;max-height:90vh;overflow:auto}.card.rem h2{text-align:center}.rem ul{margin:8px 0;padding-left:20px}.rem li{margin:3px 0}.rem .go{display:block;margin:0 auto}.presets,.acts{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:10px 0}.pick{display:grid;grid-template-columns:1fr 1fr;gap:10px}.pick label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mut)}.pick input{width:100%;height:38px;padding:0;border:1px solid var(--line);border-radius:8px;background:none;cursor:pointer}.acts .go{margin:0}
+.edonly{display:none}.edonly.show{display:inline-block}#nm,#res{width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;margin-top:6px}#lbl{margin:8px 0;padding-left:26px}#lbl li{margin:4px 0}
+.card button.go{background:var(--acc);color:var(--accink);border-color:var(--acc)}
+@media (prefers-reduced-motion:reduce){#hintc{transition:none}}
+</style>
+</head>
+<body>
+<header class="bar">
+  <h1>Step 3: LOG</h1>
+  <select id="count" aria-label="Number of pieces">
+    <option value="12">12 pieces</option>
+    <option value="24" selected>24 pieces</option>
+    <option value="48">48 pieces</option>
+    <option value="96">96 pieces</option>
+  </select>
+  <label class="btn edonly">Use my photo<input id="file" type="file" accept="image/*" hidden></label>
+  <button id="hint">Hint (1 use)</button>
+  <button id="lbb">Leaderboard</button>
+  <button id="new">Restart</button>
+  <button id="colb" class="edonly">Colours</button>
+  <button id="otb" class="edonly">Owner tools</button>
+  <span class="stat"><b id="timer">0:00</b> &nbsp;<span id="prog">0/24</span></span>
+</header>
+<main id="stage"><div id="board"><canvas id="hintc"></canvas></div></main>
+<div id="win" class="ov"><div class="card rem"><h2>Log It. Track It. Resolve It.</h2><p id="wt"></p>
+<div id="sbox"><input id="nm" maxlength="30" placeholder="Your name" autocomplete="off"><div class="acts"><button class="go" id="sv">Save my time</button></div></div>
+<p id="smsg"></p>
+<input id="res" readonly aria-label="Your result"><div class="acts"><button id="cp">Copy result</button><button id="lbb2">Leaderboard</button><button id="again">Play again</button></div>
+<ul><li><b>Record:</b> capture the complaint clearly and accurately.</li><li><b>Be specific:</b> include all relevant details and supporting information.</li><li><b>Categorise:</b> select the right category for proper routing.</li><li><b>Assign:</b> make sure a unique reference ID is generated.</li><li><b>Verify:</b> confirm the complaint is logged and can be tracked.</li></ul></div></div>
+<div id="lb" class="ov"><div class="card rem"><h2>Fastest times</h2><div class="presets" id="lbt"></div><ol id="lbl"></ol><p id="lbn"></p><div class="acts"><button class="go" id="lbx">Close</button></div></div></div>
+<div id="col" class="ov"><div class="card rem"><h2>Colours</h2><p>Pick a preset or choose your own. Applying starts a new puzzle.</p>
+<div class="presets"><button data-pre="red">Red &amp; grey</button><button data-pre="black">Black &amp; red</button><button data-pre="teal">Teal &amp; amber</button><button data-pre="navy">Navy &amp; gold</button></div>
+<div class="pick"><label>Background<input type="color" id="c_b1"></label><label>Background glow<input type="color" id="c_b2"></label><label>Accent<input type="color" id="c_ac"></label><label>Text<input type="color" id="c_ink"></label></div>
+<div class="acts"><button id="colx">Cancel</button><button class="go" id="cola">Apply colours</button></div></div></div>
+<div id="ot" class="ov"><div class="card rem"><h2>Owner tools</h2>
+<p>Set the piece count and hints, then send players the link below.</p>
+<div class="acts"><select id="lockn" aria-label="Locked piece count"><option value="0">Players choose</option><option value="12">12 pieces</option><option value="24" selected>24 pieces</option><option value="48">48 pieces</option><option value="96">96 pieces</option></select><select id="lockh" aria-label="Hints allowed"><option value="0">No hints</option><option value="1" selected>1 hint</option><option value="2">2 hints</option><option value="3">3 hints</option><option value="5">5 hints</option></select><select id="locks" aria-label="Seconds per hint"><option value="3">3 sec</option><option value="5" selected>5 sec</option><option value="8">8 sec</option><option value="10">10 sec</option><option value="15">15 sec</option></select><button id="lockc">Copy locked link</button></div>
+<input id="lockl" readonly aria-label="Locked link">
+<p id="otm"></p>
+<div class="acts"><button class="go" id="otx">Close</button></div></div></div>
+<script>
+const $=s=>document.querySelector(s);
+const stage=$('#stage'),boardEl=$('#board'),hintc=$('#hintc'),sel=$('#count');
+const dpr=Math.min(window.devicePixelRatio||1,2);
+const CFG={12:[4,3],24:[6,4],48:[8,6],96:[12,8]};
+const hit=document.createElement('canvas').getContext('2d');
+let srcImg,pieces=[],z=10,placed=0,total=0,t0=0,tick=null,drag=null,srcCanvas=null;
 
+function makePoster(){
+  const P=PAL,w=1200,h=900,c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');
+  const F='system-ui,-apple-system,"Segoe UI",Arial,sans-serif',dk=onInk(P.ac),YEL='#ffd23f';
+  const rr=(a,b,w2,h2,r)=>{x.beginPath();x.moveTo(a+r,b);x.arcTo(a+w2,b,a+w2,b+h2,r);x.arcTo(a+w2,b+h2,a,b+h2,r);x.arcTo(a,b+h2,a,b,r);x.arcTo(a,b,a+w2,b,r);x.closePath();};
+  const dot=(cx,cy,r)=>{x.beginPath();x.arc(cx,cy,r,0,7);x.fill();};
+  x.lineCap='round';x.lineJoin='round';x.textAlign='left';
+  let g=x.createLinearGradient(0,0,w,h);g.addColorStop(0,P.b1);g.addColorStop(1,P.b2);
+  x.fillStyle=g;x.fillRect(0,0,w,h);
+  x.globalAlpha=.13;x.fillStyle=P.ac;dot(1120,90,190);dot(80,700,130);x.globalAlpha=1;
+  const cc=[P.ac,P.ink,YEL];
+  for(let i=0;i<46;i++){x.globalAlpha=.7;x.fillStyle=cc[i%3];const cx=(i*173.3)%1180+10,cy=(i*97.1)%730+15;
+    if(i%2){dot(cx,cy,5+i%4*2);}else{x.save();x.translate(cx,cy);x.rotate(i);x.fillRect(-7,-3,14,6);x.restore();}}
+  x.globalAlpha=1;
+  // headline
+  let fs=190;x.font='900 '+fs+'px '+F;
+  while(x.measureText('LOG IT!').width>570&&fs>60){fs-=4;x.font='900 '+fs+'px '+F;}
+  x.textBaseline='alphabetic';x.fillStyle=P.ac;x.fillText('LOG IT!',67,247);x.fillStyle=P.ink;x.fillText('LOG IT!',60,240);
+  x.font='700 40px '+F;x.globalAlpha=.92;x.fillText('If it\u2019s not logged,',64,312);x.fillText('it can\u2019t be tracked.',64,360);x.globalAlpha=1;
+  // complaint bubble
+  x.fillStyle='#ffffff';rr(70,430,380,190,40);x.fill();
+  x.beginPath();x.moveTo(130,612);x.lineTo(104,690);x.lineTo(215,612);x.closePath();x.fill();
+  x.fillStyle=YEL;dot(170,525,55);
+  x.fillStyle='#2b2b2b';dot(150,516,6);dot(190,516,6);
+  x.strokeStyle='#2b2b2b';x.lineWidth=5;
+  x.beginPath();x.moveTo(135,496);x.lineTo(160,506);x.moveTo(205,496);x.lineTo(180,506);x.stroke();
+  x.beginPath();x.arc(170,568,20,Math.PI*1.15,Math.PI*1.85);x.stroke();
+  x.fillStyle=P.ac;x.font='900 140px '+F;x.textAlign='center';x.fillText('!',335,575);x.textAlign='left';
+  // arrow
+  x.strokeStyle=P.ac;x.lineWidth=12;x.beginPath();x.moveTo(468,500);x.quadraticCurveTo(545,415,632,452);x.stroke();
+  x.fillStyle=P.ac;x.beginPath();x.moveTo(668,466);x.lineTo(626,432);x.lineTo(634,484);x.closePath();x.fill();
+  // clipboard
+  x.save();x.translate(900,405);x.rotate(-.06);x.scale(.9,.9);
+  x.globalAlpha=.3;x.fillStyle='#000';rr(-260,-286,540,600,36);x.fill();x.globalAlpha=1;
+  x.fillStyle=P.ac;rr(-270,-300,540,600,36);x.fill();
+  x.fillStyle='#ffffff';rr(-235,-250,470,530,18);x.fill();
+  x.fillStyle='#aab0ba';rr(-95,-328,190,74,16);x.fill();x.fillStyle='#7d838d';rr(-48,-312,96,24,10);x.fill();
+  for(let i=0;i<4;i++){const y=-205+i*92;
+    x.fillStyle=P.ac;rr(-205,y,60,60,14);x.fill();
+    x.strokeStyle='#ffffff';x.lineWidth=9;x.beginPath();x.moveTo(-192,y+31);x.lineTo(-177,y+45);x.lineTo(-157,y+16);x.stroke();
+    x.fillStyle='#d4d6dc';rr(-120,y+8,300-i*35,18,9);x.fill();
+    x.fillStyle='#e6e8ec';rr(-120,y+36,200-i*20,14,7);x.fill();}
+  x.save();x.translate(0,222);x.rotate(-.12);
+  x.strokeStyle=P.ac;x.lineWidth=9;rr(-165,-44,330,88,14);x.stroke();
+  x.fillStyle=P.ac;x.font='900 58px '+F;x.textAlign='center';x.textBaseline='middle';x.fillText('LOGGED',0,4);
+  x.restore();x.restore();
+  x.textAlign='left';x.textBaseline='alphabetic';
+  // magnifier
+  x.fillStyle='#ffffff';x.globalAlpha=.22;dot(1040,610,70);x.globalAlpha=1;
+  x.strokeStyle=P.ink;x.lineWidth=18;x.beginPath();x.arc(1040,610,70,0,7);x.stroke();
+  x.lineWidth=26;x.beginPath();x.moveTo(1092,662);x.lineTo(1150,722);x.stroke();
+  x.strokeStyle=P.ac;x.lineWidth=14;x.beginPath();x.moveTo(1010,614);x.lineTo(1032,638);x.lineTo(1072,588);x.stroke();
+  // band
+  x.fillStyle=P.ac;x.fillRect(0,770,w,130);
+  x.fillStyle=dk;x.textAlign='center';x.textBaseline='middle';x.font='900 62px '+F;x.fillText('Log It. Track It. Resolve It.',w/2,836);
+  return c;
+}
+function cover(ctx,img,w,h){
+  const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height,s=Math.max(w/iw,h/ih);
+  ctx.drawImage(img,(w-iw*s)/2,(h-ih*s)/2,iw*s,ih*s);
+}
+function edge(p,x0,y0,x1,y1,nx,ny,s,u){
+  if(!s){p.lineTo(x1,y1);return;}
+  const dx=x1-x0,dy=y1-y0,P=(a,b)=>[x0+dx*a+nx*s*u*b,y0+dy*a+ny*s*u*b];
+  p.lineTo(...P(.40,0));
+  for(const q of [[.41,.05,.34,.10,.35,.20],[.36,.30,.45,.34,.5,.34],[.55,.34,.64,.30,.65,.20],[.66,.10,.59,.05,.60,0]])
+    p.bezierCurveTo(...P(q[0],q[1]),...P(q[2],q[3]),...P(q[4],q[5]));
+  p.lineTo(x1,y1);
+}
+function mkPath(pad,pw,ph,u,s){
+  const p=new Path2D(),x0=pad,y0=pad,x1=pad+pw,y1=pad+ph;
+  p.moveTo(x0,y0);
+  edge(p,x0,y0,x1,y0,0,-1,s[0],u);edge(p,x1,y0,x1,y1,1,0,s[1],u);
+  edge(p,x1,y1,x0,y1,0,1,s[2],u);edge(p,x0,y1,x0,y0,-1,0,s[3],u);
+  p.closePath();return p;
+}
+const fmt=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+function setProg(){$('#prog').textContent=placed+'/'+total;}
+function place(p){p.el.style.transform='translate('+p.x+'px,'+p.y+'px)';}
+
+function start(){
+  clearInterval(tick);resetHint();t0=0;$('#timer').textContent='0:00';
+  stage.querySelectorAll('.piece').forEach(e=>e.remove());
+  pieces=[];placed=0;z=10;
+  const [cols,rows]=CFG[sel.value];total=cols*rows;
+  const SW=stage.clientWidth,SH=stage.clientHeight;
+  const bw=Math.floor(Math.min(SW*.66,SH*.66*4/3)),bh=Math.floor(bw*3/4);
+  const bx=Math.round((SW-bw)/2),by=Math.round((SH-bh)/2);
+  Object.assign(boardEl.style,{left:bx+'px',top:by+'px',width:bw+'px',height:bh+'px'});
+  const src=document.createElement('canvas');src.width=bw*dpr;src.height=bh*dpr;
+  cover(src.getContext('2d'),srcImg,src.width,src.height);srcCanvas=src;
+  hintc.width=src.width;hintc.height=src.height;hintc.getContext('2d').drawImage(src,0,0);
+  const pw=bw/cols,ph=bh/rows,u=Math.min(pw,ph),pad=Math.ceil(u*.4);
+  const H=[],V=[];
+  for(let r=0;r<=rows;r++){H[r]=[];for(let c=0;c<cols;c++)H[r][c]=(r==0||r==rows)?0:(Math.random()<.5?1:-1);}
+  for(let r=0;r<rows;r++){V[r]=[];for(let c=0;c<=cols;c++)V[r][c]=(c==0||c==cols)?0:(Math.random()<.5?1:-1);}
+  const cw=Math.ceil(pw+2*pad),ch=Math.ceil(ph+2*pad);
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    const path=mkPath(pad,pw,ph,u,[H[r][c],-V[r][c+1],-H[r+1][c],V[r][c]]);
+    const el=document.createElement('canvas');el.className='piece';
+    el.width=cw*dpr;el.height=ch*dpr;el.style.width=cw+'px';el.style.height=ch+'px';
+    const x=el.getContext('2d');x.scale(dpr,dpr);
+    x.save();x.clip(path);x.drawImage(src,pad-c*pw,pad-r*ph,bw,bh);
+    x.lineWidth=2;x.strokeStyle='rgba(255,255,255,.28)';x.stroke(path);x.restore();
+    x.lineWidth=1;x.strokeStyle='rgba(0,0,0,.4)';x.stroke(path);
+    const tx=bx+c*pw-pad,ty=by+r*ph-pad;
+    let px,py,n=0;
+    do{px=Math.random()*Math.max(1,SW-cw);py=Math.random()*Math.max(1,SH-ch);n++;}
+    while(n<40&&px+cw-pad>bx&&px+pad<bx+bw&&py+ch-pad>by&&py+pad<by+bh);
+    const p={el,path,x:px,y:py,tx,ty,cw,ch,u,done:false};
+    place(p);stage.appendChild(el);pieces.push(p);
+  }
+  setProg();
+}
+
+stage.addEventListener('pointerdown',e=>{
+  if(e.button>0||drag||hinting)return;
+  const R=stage.getBoundingClientRect(),px=e.clientX-R.left,py=e.clientY-R.top;
+  for(let i=pieces.length-1;i>=0;i--){
+    const p=pieces[i];if(p.done)continue;
+    if(hit.isPointInPath(p.path,px-p.x,py-p.y)){
+      drag={p,ox:px-p.x,oy:py-p.y,id:e.pointerId};
+      pieces.splice(i,1);pieces.push(p);
+      p.el.style.zIndex=++z;p.el.classList.add('lift');
+      stage.setPointerCapture(e.pointerId);
+      if(!t0){t0=Date.now();tick=setInterval(()=>{$('#timer').textContent=fmt(Math.floor((Date.now()-t0)/1000));},500);}
+      e.preventDefault();return;
+    }
+  }
+});
+stage.addEventListener('pointermove',e=>{
+  if(!drag||e.pointerId!==drag.id)return;
+  const R=stage.getBoundingClientRect(),p=drag.p;
+  p.x=Math.min(Math.max(e.clientX-R.left-drag.ox,-p.cw*.3),stage.clientWidth-p.cw*.7);
+  p.y=Math.min(Math.max(e.clientY-R.top-drag.oy,-p.ch*.3),stage.clientHeight-p.ch*.7);
+  place(p);
+});
+function drop(e){
+  if(!drag||e.pointerId!==drag.id)return;
+  const p=drag.p;drag=null;p.el.classList.remove('lift');
+  if(Math.hypot(p.x-p.tx,p.y-p.ty)<Math.max(14,p.u*.35)){
+    p.x=p.tx;p.y=p.ty;place(p);p.done=true;p.el.classList.add('done');p.el.style.zIndex='';
+    placed++;setProg();
+    if(placed===total){
+      finish();
+    }
+  }
+}
+stage.addEventListener('pointerup',drop);
+stage.addEventListener('pointercancel',drop);
+
+let HINTS=1,SECS=5,hintsLeft=1,hinting=false,hintIv=null;
+const hintLabel=()=>HINTS<1?'No hints':'Hint ('+hintsLeft+' left)';
+function resetHint(){
+  clearInterval(hintIv);hinting=false;hintsLeft=HINTS;
+  const b=$('#hint');b.disabled=HINTS<1;b.textContent=hintLabel();
+  hintc.style.opacity=0;boardEl.style.zIndex='';
+}
+$('#hint').onclick=()=>{
+  if(hintsLeft<1||hinting)return;
+  hintsLeft--;hinting=true;let n=SECS;const b=$('#hint');
+  b.disabled=true;b.textContent='Hint: '+n;
+  boardEl.style.zIndex=500;hintc.style.opacity=1;
+  hintIv=setInterval(()=>{n--;
+    if(n>0){b.textContent='Hint: '+n;return;}
+    clearInterval(hintIv);hintc.style.opacity=0;boardEl.style.zIndex='';hinting=false;
+    b.disabled=hintsLeft<1;b.textContent=hintLabel();
+  },1000);
+};
+
+$('#new').onclick=start;
+sel.onchange=start;
+$('#again').onclick=()=>{$('#win').classList.remove('on');start();};
+$('#file').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  const fr=new FileReader();
+  fr.onload=()=>{const im=new Image();im.onload=()=>{srcImg=im;customImg=true;start();};im.src=fr.result;};
+  fr.readAsDataURL(f);e.target.value='';
+};
+let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{if(!t0&&!placed)start();},250);});
+const PRE={
+  red:{b1:'#26282c',b2:'#54575e',ac:'#e3101f',ink:'#ffffff'},
+  black:{b1:'#0d0d0f',b2:'#2c2c32',ac:'#ff2d3d',ink:'#ffffff'},
+  teal:{b1:'#0b2630',b2:'#17606e',ac:'#ffc247',ink:'#ffffff'},
+  navy:{b1:'#0a1f44',b2:'#1d4e9e',ac:'#f5b700',ink:'#ffffff'}
+};
+let PAL={...PRE.red};
+try{const sv=JSON.parse(localStorage.getItem('jpal')||'null');if(sv&&sv.b1&&sv.ac)PAL=sv;}catch(e){}
+function onInk(hex){const n=parseInt(hex.slice(1),16);return (.299*(n>>16)+.587*(n>>8&255)+.114*(n&255))>150?'#111111':'#ffffff';}
+function applyChrome(){const r=document.documentElement.style;r.setProperty('--acc',PAL.ac);r.setProperty('--accink',onInk(PAL.ac));}
+const KEYS=['b1','b2','ac','ink'];
+function fillPickers(){KEYS.forEach(k=>$('#c_'+k).value=PAL[k]);}
+$('#colb').onclick=()=>{fillPickers();$('#col').classList.add('on');};
+$('#colx').onclick=()=>$('#col').classList.remove('on');
+document.querySelectorAll('[data-pre]').forEach(b=>b.onclick=()=>{PAL={...PRE[b.dataset.pre]};fillPickers();});
+$('#cola').onclick=()=>{
+  KEYS.forEach(k=>PAL[k]=$('#c_'+k).value);
+  try{localStorage.setItem('jpal',JSON.stringify(PAL));}catch(e){}
+  applyChrome();srcImg=makePoster();customImg=false;$('#col').classList.remove('on');start();
+};
+applyChrome();
+srcImg=makePoster();
+let DB=null,UID=null,CAN=null,myName='',customImg=false,lastMs=0,saved=false,ROWS=[],lbCount=24;
+const fmtMs=ms=>{const t=ms/1000;return Math.floor(t/60)+':'+(t%60).toFixed(1).padStart(4,'0');};
+function resultText(){const n=($('#nm').value||myName||'').trim()||'Player';return n+' \u2014 '+sel.value+' pieces \u2014 '+fmtMs(lastMs);}
+function finish(){
+  clearInterval(tick);lastMs=Date.now()-t0;saved=false;
+  $('#wt').textContent='You finished '+sel.value+' pieces in '+fmtMs(lastMs)+'.';
+  let nm=myName;try{nm=localStorage.getItem('jname')||myName;}catch(e){}
+  $('#nm').value=nm;$('#sv').disabled=false;
+  const can=!!(DB&&UID)&&CAN!==false&&!customImg;
+  $('#sbox').style.display=can?'block':'none';
+  $('#smsg').textContent=can?'':(customImg?'Times on custom photos are not ranked.':'Copy your result and send it to the organiser.');
+  $('#res').value=resultText();
+  setTimeout(()=>$('#win').classList.add('on'),450);
+}
+$('#nm').oninput=()=>{$('#res').value=resultText();};
+$('#cp').onclick=async()=>{
+  const r=$('#res');r.select();let ok=false;
+  try{await navigator.clipboard.writeText(r.value);ok=true;}catch(e){try{ok=document.execCommand('copy');}catch(e2){}}
+  $('#smsg').textContent=ok?'Copied.':'Press and hold the text above to copy it.';
+};
+$('#sv').onclick=async()=>{
+  const name=($('#nm').value||'').trim().slice(0,30);
+  if(!name){$('#smsg').textContent='Enter your name first.';return;}
+  if(saved)return;
+  $('#sv').disabled=true;
+  try{localStorage.setItem('jname',name);}catch(e){}
+  try{
+    const ref=DB.collection('scores').doc(UID),cur=await ref.get(),d=(cur.exists&&cur.data())||{},k='t'+(+sel.value);
+    const body={...d,name};
+    const best=!(d[k]>0)||lastMs<d[k];
+    if(best)body[k]=lastMs;
+    await ref.set(body);saved=true;
+    $('#smsg').textContent=best?'Saved. That is your best time.':'Saved. Your best stays '+fmtMs(d[k])+'.';
+    $('#res').value=resultText();
+    setTimeout(openLb,700);
+  }catch(e){$('#sv').disabled=false;$('#smsg').textContent='Could not save your time. Copy your result and send it to the organiser.';}
+};
+function renderLb(){
+  const k='t'+lbCount,list=allRows().filter(r=>r[k]>0).sort((a,b)=>a[k]-b[k]).slice(0,15);
+  const ol=$('#lbl');ol.textContent='';
+  list.forEach(r=>{const li=document.createElement('li'),b=document.createElement('b');b.textContent=r.name||'Player';li.append(b,' \u2014 '+fmtMs(r[k]));ol.appendChild(li);});
+  $('#lbn').textContent=list.length?'':'No times yet for '+lbCount+' pieces. Be the first.';
+  document.querySelectorAll('#lbt button').forEach(b=>b.classList.toggle('on',+b.dataset.n===lbCount));
+}
+[12,24,48,96].forEach(n=>{const b=document.createElement('button');b.dataset.n=n;b.textContent=n+' pieces';b.onclick=()=>{lbCount=n;renderLb();};$('#lbt').appendChild(b);});
+function openLb(){$('#win').classList.remove('on');lbCount=+sel.value;renderLb();$('#lb').classList.add('on');}
+$('#lbb').onclick=openLb;$('#lbb2').onclick=openLb;$('#lbx').onclick=()=>$('#lb').classList.remove('on');
+
+const BAKED=[];
+const BASE=location.href.split('#')[0];
+if(!BAKED.length){$('#lbb').style.display='none';$('#lbb2').style.display='none';}
+function allRows(){
+  const m=new Map();
+  [...BAKED,...ROWS].forEach(r=>{
+    const key=String(r.name||'Player').trim().toLowerCase(),o=m.get(key)||{name:r.name||'Player'};
+    [12,24,48,96].forEach(n=>{const k='t'+n;if(r[k]>0&&(!(o[k]>0)||r[k]<o[k]))o[k]=r[k];});
+    m.set(key,o);
+  });
+  return [...m.values()];
+}
+function showOwner(){document.querySelectorAll('.edonly').forEach(e=>e.classList.add('show'));}
+function applyHash(){
+  const h=location.hash;
+  if(h==='#owner')showOwner();
+  const m=h.match(/^#p(0|12|24|48|96)(?:-h(\d{1,2})-s(\d{1,2}))?$/);
+  HINTS=m&&m[2]!=null?Math.min(+m[2],20):1;
+  SECS=m&&m[3]!=null?Math.max(1,Math.min(+m[3],30)):5;
+  if(m&&m[1]!=='0'){sel.value=m[1];sel.disabled=true;sel.title='Piece count set by the organiser';}
+  else{sel.disabled=false;sel.title='';}
+}
+applyHash();
+addEventListener('hashchange',()=>{const was=sel.value+'|'+HINTS+'|'+SECS;applyHash();if(sel.value+'|'+HINTS+'|'+SECS!==was)start();});
+$('#otb').onclick=()=>{$('#otm').textContent='';$('#lockl').value='';$('#ot').classList.add('on');};
+$('#otx').onclick=()=>$('#ot').classList.remove('on');
+$('#lockc').onclick=async()=>{
+  const l=BASE+'#p'+$('#lockn').value+'-h'+$('#lockh').value+'-s'+$('#locks').value,f=$('#lockl');f.value=l;f.select();let ok=false;
+  try{await navigator.clipboard.writeText(l);ok=true;}catch(e){try{ok=document.execCommand('copy');}catch(e2){}}
+  $('#otm').textContent=ok?'Link copied. Send it to your players.':'Copy the link above and send it.';
+};
+requestAnimationFrame(start);
+</script>
+</body>
+</html>
