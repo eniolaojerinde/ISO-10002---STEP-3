@@ -11,9 +11,9 @@ box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:en
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141517;--panel:#1e2024;--ink:#ececee;--mut:#9a9ea6;--acc:#ff3040;--accink:#ffffff;--line:#35383e;--board:#25272b;color-scheme:dark}}
 :root[data-theme="dark"]{--bg:#141517;--panel:#1e2024;--ink:#ececee;--mut:#9a9ea6;--acc:#ff3040;--accink:#ffffff;--line:#35383e;--board:#25272b;color-scheme:dark}
 html,body{height:100%;margin:0}
-body{background:var(--bg);color:var(--ink);font:15px/1.4 "Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;flex-direction:column;overflow:hidden}
+body{background:linear-gradient(rgba(0,0,0,.38),rgba(0,0,0,.38)),linear-gradient(135deg,var(--b1,#2a1b6e),var(--b2,#7b2ff7));color:var(--ink);font:15px/1.4 "Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;flex-direction:column;overflow:hidden}
 .bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
-h1{font-size:18px;font-weight:700;margin:0 auto 0 0}
+h1{font-size:19px;font-weight:700;margin:0 auto 0 0;color:#fff}
 button,select,.btn{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 11px;cursor:pointer}
 button:hover,.btn:hover{border-color:var(--acc)}
 button:focus-visible,select:focus-visible,.btn:focus-within{outline:2px solid var(--acc);outline-offset:2px}
@@ -33,14 +33,33 @@ button.on{background:var(--acc);color:var(--accink);border-color:var(--acc)}
 .card h2{margin:0 0 6px;font-size:22px}
 .card p{margin:6px 0 12px;color:var(--mut)}
 .card.rem{text-align:left;max-width:440px;max-height:90vh;overflow:auto}.card.rem h2{text-align:center}.rem ul{margin:8px 0;padding-left:20px}.rem li{margin:3px 0}.rem .go{display:block;margin:0 auto}.presets,.acts{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:10px 0}.pick{display:grid;grid-template-columns:1fr 1fr;gap:10px}.pick label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mut)}.pick input{width:100%;height:38px;padding:0;border:1px solid var(--line);border-radius:8px;background:none;cursor:pointer}.acts .go{margin:0}
-.edonly{display:none}.edonly.show{display:inline-block}#nm,#res,#imp,#impo,#lockl,#emi{width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;margin-top:6px}#lbl{margin:8px 0;padding-left:26px}#lbl li{margin:4px 0}
+.edonly{display:none}.edonly.show{display:inline-block}#nm,#res,#imp,#impo,#lockl,#emi{width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;margin-top:6px}#lbl{margin:8px 0;padding-left:26px}#lbl li{margin:4px 0}#pvc{max-width:84vw;height:auto;border-radius:8px;display:block}
 .card button.go{background:var(--acc);color:var(--accink);border-color:var(--acc)}
 @media (prefers-reduced-motion:reduce){#hintc{transition:none}}
+.bar{background:rgba(10,6,30,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:0;color:#fff}
+.bar button,.bar select,.bar .btn{background:rgba(255,255,255,.13);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:7px 15px;font-weight:500}
+.bar button:hover:not(:disabled),.bar .btn:hover{background:var(--acc);color:var(--accink);border-color:var(--acc)}
+.bar button:disabled{opacity:.5;cursor:default}
+.bar select option{color:#111;background:#fff}
+.stat{background:rgba(255,255,255,.13);padding:6px 14px;border-radius:999px;color:#fff}
+.stat b{color:#fff}
+#pbar{height:6px;background:rgba(255,255,255,.14);flex:none}
+#pfill{display:block;height:100%;width:0;background:linear-gradient(90deg,#00d4c8,var(--acc),#ff4f8b);transition:width .3s}
+#board{background:rgba(255,255,255,.14);outline:3px dashed rgba(255,255,255,.55);border-radius:10px;box-shadow:inset 0 0 40px rgba(0,0,0,.3),0 10px 40px rgba(0,0,0,.35)}
+.deco{position:absolute;border-radius:50%;opacity:.22;pointer-events:none;animation:flt 9s ease-in-out infinite alternate}
+.deco.sq{border-radius:16px}
+@keyframes flt{from{transform:translateY(0) rotate(0)}to{transform:translateY(-26px) rotate(28deg)}}
+.piece{filter:drop-shadow(0 3px 5px rgba(0,0,0,.5))}
+.piece.pop{animation:pop .4s ease-out}
+@keyframes pop{0%{filter:brightness(1.7) drop-shadow(0 0 16px #fff)}100%{filter:none}}
+.card{border-radius:20px;border-top:6px solid var(--acc);box-shadow:0 20px 60px rgba(0,0,0,.45)}
+.card h2{font-size:24px}
+@media (prefers-reduced-motion:reduce){.deco{animation:none}.piece.pop{animation:none}#pfill{transition:none}}
 </style>
 </head>
 <body>
 <header class="bar">
-  <h1>Step 4: INVESTIGATE</h1>
+  <h1>🔍 Step 4: INVESTIGATE</h1>
   <select id="count" aria-label="Number of pieces">
     <option value="12">12 pieces</option>
     <option value="24" selected>24 pieces</option>
@@ -55,9 +74,19 @@ button.on{background:var(--acc);color:var(--accink);border-color:var(--acc)}
   <button id="otb" class="edonly">Owner tools</button>
   <span class="stat"><b id="timer">0:00</b> &nbsp;<span id="prog">0/24</span></span>
 </header>
-<main id="stage"><div id="board"><canvas id="hintc"></canvas></div></main>
+<div id="pbar"><i id="pfill"></i></div>
+<main id="stage">
+<div class="deco" style="left:5%;top:14%;width:80px;height:80px;background:#00d4c8"></div>
+<div class="deco sq" style="left:14%;top:70%;width:64px;height:64px;background:#ff4f8b;animation-delay:-3s"></div>
+<div class="deco" style="left:30%;top:8%;width:46px;height:46px;background:#ffb800;animation-delay:-5s"></div>
+<div class="deco sq" style="left:46%;top:84%;width:70px;height:70px;background:#00d4c8;animation-delay:-2s"></div>
+<div class="deco" style="left:62%;top:6%;width:90px;height:90px;background:#ff4f8b;animation-delay:-6s"></div>
+<div class="deco sq" style="left:78%;top:76%;width:58px;height:58px;background:#ffb800;animation-delay:-4s"></div>
+<div class="deco" style="left:90%;top:30%;width:74px;height:74px;background:#00d4c8;animation-delay:-1s"></div>
+<div class="deco sq" style="left:3%;top:46%;width:44px;height:44px;background:#ffb800;animation-delay:-7s"></div>
+<div id="board"><canvas id="hintc"></canvas></div></main>
 <div id="em" class="ov on"><div class="card rem"><h2>Step 4: INVESTIGATE puzzle</h2><p>Enter your UBA email to start. Your email and finish time are shared with the programme organisers.</p><input id="emi" type="email" inputmode="email" autocomplete="email" aria-label="Your email"><p id="emm"></p><div class="acts"><button class="go" id="ems">Start puzzle</button></div></div></div>
-<div id="win" class="ov"><div class="card rem"><h2>Don’t Assume. Investigate.</h2><p id="wt"></p>
+<div id="win" class="ov"><div class="card rem"><h2>🎉 Don’t Assume. Investigate.</h2><p id="wt"></p>
 <div id="sbox"><input id="nm" maxlength="30" placeholder="Your name" autocomplete="off"><div class="acts"><button class="go" id="sv">Save my time</button></div></div>
 <p id="smsg"></p>
 <input id="res" readonly aria-label="Your result"><div class="acts"><button id="fs" style="display:none">Submit my time</button><button id="cp">Copy result</button><button id="lbb2">Leaderboard</button><button id="again">Practice again</button></div>
@@ -78,6 +107,7 @@ button.on{background:var(--acc);color:var(--accink);border-color:var(--acc)}
 <p id="impm"></p>
 <p id="otm"></p>
 <div class="acts"><button class="go" id="otx">Close</button></div></div></div>
+<canvas id="conf" style="position:fixed;inset:0;pointer-events:none;z-index:1100"></canvas>
 <script>
 /* ===== ORGANISER SETTINGS ===== */
 const EMAIL_DOMAIN='ubagroup.com';   // e.g. 'ubagroup.com' to accept only that domain. Leave '' to accept any email.
@@ -180,7 +210,7 @@ function mkPath(pad,pw,ph,u,s){
   p.closePath();return p;
 }
 const fmt=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
-function setProg(){$('#prog').textContent=placed+'/'+total;}
+function setProg(){$('#prog').textContent=placed+'/'+total;$('#pfill').style.width=(total?placed/total*100:0)+'%';}
 function place(p){p.el.style.transform='translate('+p.x+'px,'+p.y+'px)';}
 
 function start(){
@@ -244,7 +274,7 @@ function drop(e){
   if(!drag||e.pointerId!==drag.id)return;
   const p=drag.p;drag=null;p.el.classList.remove('lift');
   if(Math.hypot(p.x-p.tx,p.y-p.ty)<Math.max(14,p.u*.35)){
-    p.x=p.tx;p.y=p.ty;place(p);p.done=true;p.el.classList.add('done');p.el.style.zIndex='';
+    p.x=p.tx;p.y=p.ty;place(p);p.done=true;p.el.classList.add('done');p.el.style.zIndex='';p.el.classList.add('pop');setTimeout(()=>p.el.classList.remove('pop'),450);
     placed++;setProg();
     if(placed===total){
       finish();
@@ -293,7 +323,7 @@ const PRE={
 let PAL={...PRE.fun};
 try{const sv=JSON.parse(localStorage.getItem('jpal4')||'null');if(sv&&sv.b1&&sv.ac)PAL=sv;}catch(e){}
 function onInk(hex){const n=parseInt(hex.slice(1),16);return (.299*(n>>16)+.587*(n>>8&255)+.114*(n&255))>150?'#111111':'#ffffff';}
-function applyChrome(){const r=document.documentElement.style;r.setProperty('--acc',PAL.ac);r.setProperty('--accink',onInk(PAL.ac));}
+function applyChrome(){const r=document.documentElement.style;r.setProperty('--acc',PAL.ac);r.setProperty('--accink',onInk(PAL.ac));r.setProperty('--b1',PAL.b1);r.setProperty('--b2',PAL.b2);}
 const KEYS=['b1','b2','ac','ink'];
 function fillPickers(){KEYS.forEach(k=>$('#c_'+k).value=PAL[k]);}
 $('#colb').onclick=()=>{fillPickers();$('#col').classList.add('on');};
@@ -324,6 +354,7 @@ function finish(){
   $('#cp').style.display=practice?'none':'';$('#res').style.display=practice?'none':'';
   if(practice){$('#sbox').style.display='none';$('#fs').style.display='none';$('#smsg').textContent='Practice round: this time was not recorded. Only your first finish counts.';}
   else if(EMAIL){try{localStorage.setItem('jdone4:'+EMAIL,'1');}catch(e){}}
+  confetti();
   setTimeout(()=>$('#win').classList.add('on'),450);
 }
 $('#nm').oninput=()=>{$('#res').value=resultText();};
@@ -459,6 +490,18 @@ function submitResult(){
   fetch(SUBMIT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body})
     .then(()=>{$('#smsg').textContent='Your time was sent to the organisers.';})
     .catch(()=>{$('#smsg').textContent='Could not send automatically. Copy your result and send it to the organiser.';});
+}
+function confetti(){
+  if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+  const c=$('#conf'),x=c.getContext('2d');c.width=innerWidth;c.height=innerHeight;
+  const cols=[PAL.ac,'#00d4c8','#ff4f8b','#ffffff','#7b2ff7'];
+  const ps=Array.from({length:130},()=>({x:innerWidth/2,y:innerHeight*.45,vx:(Math.random()-.5)*18,vy:-Math.random()*17-4,r:Math.random()*6.28,vr:(Math.random()-.5)*.4,s:6+Math.random()*9,c:cols[Math.random()*cols.length|0]}));
+  let f=0;
+  (function step(){
+    x.clearRect(0,0,c.width,c.height);
+    ps.forEach(p=>{p.vy+=.35;p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;x.save();x.translate(p.x,p.y);x.rotate(p.r);x.fillStyle=p.c;x.fillRect(-p.s/2,-p.s/4,p.s,p.s/2);x.restore();});
+    if(++f<160)requestAnimationFrame(step);else x.clearRect(0,0,c.width,c.height);
+  })();
 }
 requestAnimationFrame(start);
 </script>
