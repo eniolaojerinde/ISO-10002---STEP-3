@@ -358,7 +358,7 @@ const PRE={
   sepia:{b1:'#1f140b',b2:'#5a3d22',ac:'#f5c542',ink:'#fff7e6'},
   steel:{b1:'#0b1a26',b2:'#1f4e5f',ac:'#ff6b57',ink:'#ffffff'}
 };
-let PAL={...PRE.noir};
+let PAL={...PRE.std};
 try{const sv=JSON.parse(localStorage.getItem('jpal4b')||'null');if(sv&&sv.b1&&sv.ac)PAL=sv;}catch(e){}
 function onInk(hex){const n=parseInt(hex.slice(1),16);return (.299*(n>>16)+.587*(n>>8&255)+.114*(n&255))>150?'#111111':'#ffffff';}
 function applyChrome(){const r=document.documentElement.style;r.setProperty('--acc',PAL.ac);r.setProperty('--accink',onInk(PAL.ac));r.setProperty('--b1',PAL.b1);r.setProperty('--b2',PAL.b2);}
