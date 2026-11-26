@@ -256,3 +256,279 @@ function start(){
   const [cols,rows]=CFG[sel.value];
   const SW=stage.clientWidth,SH=stage.clientHeight;
   const bw=Math.floor(Math.min(SW*.66,SH*.66*4/3)),bh=Math.floor(bw*3/4);
+  const bx=Math.round((SW-bw)/2),by=Math.round((SH-bh)/2);
+  Object.assign(boardEl.style,{left:bx+'px',top:by+'px',width:bw+'px',height:bh+'px'});
+  const src=document.createElement('canvas');src.width=bw*dpr;src.height=bh*dpr;
+  cover(src.getContext('2d'),srcImg,src.width,src.height);srcCanvas=src;
+  hintc.width=src.width;hintc.height=src.height;hintc.getContext('2d').drawImage(src,0,0);
+  const shards=buildShards(cols,rows,bw,bh),u=Math.min(bw/cols,bh/rows),pad=Math.ceil(u*.2)+3;
+  total=shards.length;
+  shards.forEach(sh=>{
+    const cw=Math.ceil(sh.maxx-sh.minx+2*pad),ch=Math.ceil(sh.maxy-sh.miny+2*pad);
+    const path=new Path2D();
+    sh.pts.forEach((q,i)=>{const px=q[0]-sh.minx+pad,py=q[1]-sh.miny+pad;if(i)path.lineTo(px,py);else path.moveTo(px,py);});
+    path.closePath();
+    const el=document.createElement('canvas');el.className='piece';
+    el.width=cw*dpr;el.height=ch*dpr;el.style.width=cw+'px';el.style.height=ch+'px';
+    const x=el.getContext('2d');x.scale(dpr,dpr);
+    x.save();x.clip(path);x.drawImage(src,pad-sh.minx,pad-sh.miny,bw,bh);
+    x.fillStyle=Math.random()<.5?'rgba(255,255,255,'+(Math.random()*.12)+')':'rgba(0,0,0,'+(Math.random()*.14)+')';x.fill(path);
+    x.lineWidth=3;x.strokeStyle='rgba(255,255,255,.35)';x.stroke(path);x.restore();
+    x.lineWidth=1.2;x.strokeStyle='rgba(0,0,0,.55)';x.stroke(path);
+    const tx=bx+sh.minx-pad,ty=by+sh.miny-pad;
+    let px,py,n=0;
+    do{px=Math.random()*Math.max(1,SW-cw);py=Math.random()*Math.max(1,SH-ch);n++;}
+    while(n<40&&px+cw-pad>bx&&px+pad<bx+bw&&py+ch-pad>by&&py+pad<by+bh);
+    const p={el,path,x:px,y:py,tx,ty,cw,ch,u,done:false};
+    place(p);stage.appendChild(el);pieces.push(p);
+  });
+  setProg();
+}
+
+stage.addEventListener('pointerdown',e=>{
+  if(e.button>0||drag||hinting)return;
+  const R=stage.getBoundingClientRect(),px=e.clientX-R.left,py=e.clientY-R.top;
+  for(let i=pieces.length-1;i>=0;i--){
+    const p=pieces[i];if(p.done)continue;
+    if(hit.isPointInPath(p.path,px-p.x,py-p.y)){
+      drag={p,ox:px-p.x,oy:py-p.y,id:e.pointerId};
+      pieces.splice(i,1);pieces.push(p);
+      p.el.style.zIndex=++z;p.el.classList.add('lift');
+      stage.setPointerCapture(e.pointerId);
+      if(!t0){t0=Date.now();tick=setInterval(()=>{$('#timer').textContent=fmt(Math.floor((Date.now()-t0)/1000));},500);}
+      e.preventDefault();return;
+    }
+  }
+});
+stage.addEventListener('pointermove',e=>{
+  if(!drag||e.pointerId!==drag.id)return;
+  const R=stage.getBoundingClientRect(),p=drag.p;
+  p.x=Math.min(Math.max(e.clientX-R.left-drag.ox,-p.cw*.3),stage.clientWidth-p.cw*.7);
+  p.y=Math.min(Math.max(e.clientY-R.top-drag.oy,-p.ch*.3),stage.clientHeight-p.ch*.7);
+  place(p);
+});
+function drop(e){
+  if(!drag||e.pointerId!==drag.id)return;
+  const p=drag.p;drag=null;p.el.classList.remove('lift');
+  if(Math.hypot(p.x-p.tx,p.y-p.ty)<Math.max(14,p.u*.35)){
+    p.x=p.tx;p.y=p.ty;place(p);p.done=true;p.el.classList.add('done');p.el.style.zIndex='';p.el.classList.add('pop');setTimeout(()=>p.el.classList.remove('pop'),450);
+    placed++;setProg();
+    if(placed===total){
+      finish();
+    }
+  }
+}
+stage.addEventListener('pointerup',drop);
+stage.addEventListener('pointercancel',drop);
+
+let HINTS=1,SECS=5,hintsLeft=1,hinting=false,hintIv=null;
+const hintLabel=()=>HINTS<1?'No hints':'Hint ('+hintsLeft+' left)';
+function resetHint(){
+  clearInterval(hintIv);hinting=false;hintsLeft=HINTS;
+  const b=$('#hint');b.disabled=HINTS<1;b.textContent=hintLabel();
+  hintc.style.opacity=0;boardEl.style.zIndex='';
+}
+$('#hint').onclick=()=>{
+  if(hintsLeft<1||hinting)return;
+  hintsLeft--;hinting=true;let n=SECS;const b=$('#hint');
+  b.disabled=true;b.textContent='Hint: '+n;
+  boardEl.style.zIndex=500;hintc.style.opacity=1;
+  hintIv=setInterval(()=>{n--;
+    if(n>0){b.textContent='Hint: '+n;return;}
+    clearInterval(hintIv);hintc.style.opacity=0;boardEl.style.zIndex='';hinting=false;
+    b.disabled=hintsLeft<1;b.textContent=hintLabel();
+  },1000);
+};
+
+
+$('#new').onclick=start;
+sel.onchange=start;
+$('#again').onclick=()=>{$('#win').classList.remove('on');start();};
+$('#file').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  const fr=new FileReader();
+  fr.onload=()=>{const im=new Image();im.onload=()=>{srcImg=im;customImg=true;start();};im.src=fr.result;};
+  fr.readAsDataURL(f);e.target.value='';
+};
+let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{if(!t0&&!placed)start();},250);});
+const PRE={
+  std:{b1:'#e4e6ea',b2:'#b9bdc6',ac:'#e3101f',ink:'#1c1d20'},
+  noir:{b1:'#070b1a',b2:'#1d2b5c',ac:'#fbbf24',ink:'#f8fafc'},
+  neon:{b1:'#12001f',b2:'#4a0e6b',ac:'#39ff88',ink:'#ffffff'},
+  sepia:{b1:'#1f140b',b2:'#5a3d22',ac:'#f5c542',ink:'#fff7e6'},
+  steel:{b1:'#0b1a26',b2:'#1f4e5f',ac:'#ff6b57',ink:'#ffffff'}
+};
+let PAL={...PRE.noir};
+try{const sv=JSON.parse(localStorage.getItem('jpal4b')||'null');if(sv&&sv.b1&&sv.ac)PAL=sv;}catch(e){}
+function onInk(hex){const n=parseInt(hex.slice(1),16);return (.299*(n>>16)+.587*(n>>8&255)+.114*(n&255))>150?'#111111':'#ffffff';}
+function applyChrome(){const r=document.documentElement.style;r.setProperty('--acc',PAL.ac);r.setProperty('--accink',onInk(PAL.ac));r.setProperty('--b1',PAL.b1);r.setProperty('--b2',PAL.b2);}
+const KEYS=['b1','b2','ac','ink'];
+function fillPickers(){KEYS.forEach(k=>$('#c_'+k).value=PAL[k]);}
+$('#colb').onclick=()=>{fillPickers();$('#col').classList.add('on');};
+$('#colx').onclick=()=>$('#col').classList.remove('on');
+document.querySelectorAll('[data-pre]').forEach(b=>b.onclick=()=>{PAL={...PRE[b.dataset.pre]};fillPickers();});
+$('#cola').onclick=()=>{
+  KEYS.forEach(k=>PAL[k]=$('#c_'+k).value);
+  try{localStorage.setItem('jpal4b',JSON.stringify(PAL));}catch(e){}
+  applyChrome();srcImg=makePoster();customImg=false;$('#col').classList.remove('on');start();
+};
+applyChrome();
+srcImg=makePoster();
+let DB=null,UID=null,CAN=null,myName='',customImg=false,lastMs=0,saved=false,ROWS=[],lbCount=24;
+const fmtMs=ms=>{const t=ms/1000;return Math.floor(t/60)+':'+(t%60).toFixed(1).padStart(4,'0');};
+function resultText(){return (EMAIL||'Player')+' \u2014 '+sel.value+' pieces \u2014 '+fmtMs(lastMs);}
+function finish(){
+  clearInterval(tick);lastMs=Date.now()-t0;saved=false;
+  let practice=false;try{practice=!!EMAIL&&localStorage.getItem('jdone4:'+EMAIL)==='1';}catch(e){}
+  $('#wt').textContent='You finished '+sel.value+' pieces in '+fmtMs(lastMs)+'.';
+  let nm=myName;try{nm=localStorage.getItem('jname4')||myName;}catch(e){}
+  $('#nm').value=nm;$('#sv').disabled=false;
+  const can=!!(DB&&UID)&&CAN!==false&&!customImg;
+  $('#sbox').style.display=can?'block':'none';
+  $('#smsg').textContent=can?'':(customImg?'Times on custom photos are not ranked.':'Copy your result and send it to the organiser.');
+  if(!practice)submitResult();
+  $('#fs').style.display=(FORM_LINK&&!customImg&&EMAIL&&!practice)?'inline-block':'none';
+  $('#res').value=resultText();
+  $('#cp').style.display=practice?'none':'';$('#res').style.display=practice?'none':'';
+  if(practice){$('#sbox').style.display='none';$('#fs').style.display='none';$('#smsg').textContent='Practice round: this time was not recorded. Only your first finish counts.';}
+  else if(EMAIL){try{localStorage.setItem('jdone4:'+EMAIL,'1');}catch(e){}}
+  setTimeout(()=>$('#win').classList.add('on'),450);
+}
+$('#nm').oninput=()=>{$('#res').value=resultText();};
+$('#cp').onclick=async()=>{
+  const r=$('#res');r.select();let ok=false;
+  try{await navigator.clipboard.writeText(r.value);ok=true;}catch(e){try{ok=document.execCommand('copy');}catch(e2){}}
+  $('#smsg').textContent=ok?'Copied.':'Press and hold the text above to copy it.';
+};
+$('#sv').onclick=async()=>{
+  const name=($('#nm').value||'').trim().slice(0,30);
+  if(!name){$('#smsg').textContent='Enter your name first.';return;}
+  if(saved)return;
+  $('#sv').disabled=true;
+  try{localStorage.setItem('jname4',name);}catch(e){}
+  try{
+    const ref=DB.collection('scores').doc(UID),cur=await ref.get(),d=(cur.exists&&cur.data())||{},k='t'+(+sel.value);
+    const body={...d,name};
+    const best=!(d[k]>0)||lastMs<d[k];
+    if(best)body[k]=lastMs;
+    await ref.set(body);saved=true;
+    $('#smsg').textContent=best?'Saved. That is your best time.':'Saved. Your best stays '+fmtMs(d[k])+'.';
+    $('#res').value=resultText();
+    setTimeout(openLb,700);
+  }catch(e){$('#sv').disabled=false;$('#smsg').textContent='Could not save your time. Copy your result and send it to the organiser.';}
+};
+function renderLb(){
+  const k='t'+lbCount,list=allRows().filter(r=>r[k]>0).sort((a,b)=>a[k]-b[k]).slice(0,15);
+  const ol=$('#lbl');ol.textContent='';
+  list.forEach(r=>{const li=document.createElement('li'),b=document.createElement('b');b.textContent=r.name||'Player';li.append(b,' \u2014 '+fmtMs(r[k]));ol.appendChild(li);});
+  $('#lbn').textContent=list.length?'':'No times yet for '+lbCount+' pieces. Be the first.';
+  document.querySelectorAll('#lbt button').forEach(b=>b.classList.toggle('on',+b.dataset.n===lbCount));
+}
+[12,24,48,96].forEach(n=>{const b=document.createElement('button');b.dataset.n=n;b.textContent=n+' pieces';b.onclick=()=>{lbCount=n;renderLb();};$('#lbt').appendChild(b);});
+function openLb(){$('#win').classList.remove('on');lbCount=+sel.value;renderLb();$('#lb').classList.add('on');}
+$('#lbb').onclick=openLb;$('#lbb2').onclick=openLb;$('#lbx').onclick=()=>$('#lb').classList.remove('on');
+
+const BAKED=[];
+const BASE=location.href.split('#')[0];
+if(!BAKED.length){$('#lbb').style.display='none';$('#lbb2').style.display='none';}
+function allRows(){
+  const m=new Map();
+  [...BAKED,...ROWS].forEach(r=>{
+    const key=String(r.name||'Player').trim().toLowerCase(),o=m.get(key)||{name:r.name||'Player'};
+    [12,24,48,96].forEach(n=>{const k='t'+n;if(r[k]>0&&(!(o[k]>0)||r[k]<o[k]))o[k]=r[k];});
+    m.set(key,o);
+  });
+  return [...m.values()];
+}
+function showOwner(){document.querySelectorAll('.edonly').forEach(e=>e.classList.add('show'));$('#em').classList.remove('on');}
+function applyHash(){
+  const h=location.hash;
+  if(h==='#owner')showOwner();
+  const m=h.match(/^#p(0|12|24|48|96)(?:-h(\d{1,2})-s(\d{1,2}))?$/);
+  HINTS=m&&m[2]!=null?Math.min(+m[2],20):1;
+  SECS=m&&m[3]!=null?Math.max(1,Math.min(+m[3],30)):5;
+  if(m&&m[1]!=='0'){sel.value=m[1];sel.disabled=true;sel.title='Piece count set by the organiser';}
+  else{sel.disabled=false;sel.title='';}
+}
+applyHash();
+addEventListener('hashchange',()=>{const was=sel.value+'|'+HINTS+'|'+SECS;applyHash();if(sel.value+'|'+HINTS+'|'+SECS!==was)start();});
+$('#otb').onclick=()=>{$('#otm').textContent='';$('#lockl').value='';$('#ot').classList.add('on');};
+$('#otx').onclick=()=>$('#ot').classList.remove('on');
+$('#lockc').onclick=async()=>{
+  const l=BASE+'#p'+$('#lockn').value+'-h'+$('#lockh').value+'-s'+$('#locks').value,f=$('#lockl');f.value=l;f.select();let ok=false;
+  try{await navigator.clipboard.writeText(l);ok=true;}catch(e){try{ok=document.execCommand('copy');}catch(e2){}}
+  $('#otm').textContent=ok?'Link copied. Send it to your players.':'Copy the link above and send it.';
+};
+function parseLines(t){
+  const out=[],bad=[];
+  t.split(/\r?\n/).forEach(l=>{
+    l=l.trim();if(!l)return;
+    const m=l.match(/^(.*?)\s*[\u2014\u2013,|-]\s*(12|24|48|96)\s*pieces?\s*[\u2014\u2013,|-]\s*(\d+):(\d{1,2}(?:\.\d)?)$/i);
+    if(!m){bad.push(l);return;}
+    out.push({name:m[1].trim()||'Player',['t'+m[2]]:Math.round((+m[3]*60+parseFloat(m[4]))*1000)});
+  });
+  return {out,bad};
+}
+function mergeRows(list){
+  const m=new Map();
+  list.forEach(r=>{
+    const key=String(r.name||'Player').trim().toLowerCase(),o=m.get(key)||{name:r.name||'Player'};
+    [12,24,48,96].forEach(n=>{const k='t'+n;if(r[k]>0&&(!(o[k]>0)||r[k]<o[k]))o[k]=r[k];});
+    m.set(key,o);
+  });
+  return [...m.values()];
+}
+function displayName(n){
+  n=String(n||'Player');if(n.indexOf('@')<0)return n;
+  return n.split('@')[0].replace(/[._-]+/g,' ').replace(/\d+/g,'').trim().replace(/\b\w/g,c=>c.toUpperCase())||'Player';
+}
+function impRows(){
+  const {out,bad}=parseLines($('#imp').value);
+  if(!out.length){$('#impm').textContent='No valid results found. Each line should look like: name@company.com \u2014 24 pieces \u2014 2:31.4';return null;}
+  return {out,bad};
+}
+$('#impx').onclick=()=>{
+  const r=impRows();if(!r)return;
+  const q=v=>{v=String(v);if(/^[=+\-@]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"';};
+  const t=v=>v>0?(v/1000).toFixed(1):'';
+  const rows=mergeRows(r.out).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+  const csv='\ufeff'+['Email,12 pieces (seconds),24 pieces (seconds),48 pieces (seconds),96 pieces (seconds)',...rows.map(x=>[q(x.name),t(x.t12),t(x.t24),t(x.t48),t(x.t96)].join(','))].join('\r\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='leaderboard.csv';
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  $('#impm').textContent='Downloaded '+rows.length+' players.'+(r.bad.length?' '+r.bad.length+' line(s) could not be read.':'');
+};
+$('#impc').onclick=async()=>{
+  const r=impRows();if(!r)return;
+  const rows=mergeRows([...BAKED,...r.out.map(o=>({...o,name:displayName(o.name)}))]);
+  const code='const BAKED='+JSON.stringify(rows).replace(/</g,'\\u003c')+';';
+  const f=$('#impo');f.value=code;f.select();let ok=false;
+  try{await navigator.clipboard.writeText(code);ok=true;}catch(e){try{ok=document.execCommand('copy');}catch(e2){}}
+  $('#impm').textContent=(ok?'Code copied (names only, no emails). ':'Copy the code above. ')+'On GitHub, replace the line that starts with "const BAKED=" with it, then commit.'+(r.bad.length?' '+r.bad.length+' line(s) could not be read.':'');
+};
+let EMAIL='';
+try{EMAIL=localStorage.getItem('jemail')||'';}catch(e){}
+$('#emi').value=EMAIL;$('#emi').placeholder='name@'+(EMAIL_DOMAIN||'yourcompany.com');
+$('#ems').onclick=()=>{
+  const v=$('#emi').value.trim().toLowerCase();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)){$('#emm').textContent='Please enter a valid email address.';return;}
+  if(EMAIL_DOMAIN&&!v.endsWith('@'+EMAIL_DOMAIN.toLowerCase())){$('#emm').textContent='Please use your @'+EMAIL_DOMAIN+' email address.';return;}
+  EMAIL=v;try{localStorage.setItem('jemail',v);}catch(e){}
+  $('#emm').textContent='';$('#em').classList.remove('on');
+};
+$('#emi').onkeydown=e=>{if(e.key==='Enter')$('#ems').click();};
+$('#fs').onclick=()=>{
+  const u=FORM_LINK.replace(/EMAILX/g,encodeURIComponent(EMAIL)).replace(/PIECESX/g,encodeURIComponent(sel.value)).replace(/TIMEX/g,encodeURIComponent(fmtMs(lastMs)));
+  window.open(u,'_blank','noopener');
+};
+function submitResult(){
+  if(!SUBMIT_URL||customImg||!EMAIL)return;
+  const body=new URLSearchParams();
+  body.set(SUBMIT_FIELDS.email,EMAIL);body.set(SUBMIT_FIELDS.pieces,sel.value);body.set(SUBMIT_FIELDS.time,fmtMs(lastMs));
+  fetch(SUBMIT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body})
+    .then(()=>{$('#smsg').textContent='Your time was sent to the organisers.';})
+    .catch(()=>{$('#smsg').textContent='Could not send automatically. Copy your result and send it to the organiser.';});
+}
+requestAnimationFrame(start);
+</script>
+</body>
+</html>
