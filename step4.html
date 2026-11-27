@@ -95,7 +95,12 @@ const FORM_LINK='';      // Microsoft Forms pre-filled link (answers EMAILX, PIE
 const $=s=>document.querySelector(s);
 const stage=$('#stage'),boardEl=$('#board'),hintc=$('#hintc'),sel=$('#count');
 const dpr=Math.min(window.devicePixelRatio||1,2);
-const CFG={12:[3,2],24:[4,3],48:[6,4],96:[8,6]}; // grid cells; every cell is split into 2 shards
+const CFG={
+  12:[4,3],
+  24:[6,4],
+  48:[8,6],
+  96:[12,8]
+}; // Each grid now generates exactly the selected number of pieces.
 const hit=document.createElement('canvas').getContext('2d');
 let srcImg,pieces=[],z=10,placed=0,total=0,t0=0,tick=null,drag=null,srcCanvas=null;
 
